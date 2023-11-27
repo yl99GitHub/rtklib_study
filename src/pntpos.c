@@ -27,7 +27,6 @@
 #include "rtklib.h"
 
 /* constants/macros ----------------------------------------------------------*/
-
 #define SQR(x)      ((x)*(x))
 
 #if 0 /* enable GPS-QZS time offset estimation */
@@ -175,6 +174,7 @@ static double prange(const obsd_t *obs, const nav_t *nav, const prcopt_t *opt,
 *          double *ion      O   ionospheric delay (L1) (m)
 *          double *var      O   ionospheric delay (L1) variance (m^2)
 * return : status(1:ok,0:error)
+* 不包括双频无电离层模式
 *-----------------------------------------------------------------------------*/
 extern int ionocorr(gtime_t time, const nav_t *nav, int sat, const double *pos,
                     const double *azel, int ionoopt, double *ion, double *var)
@@ -277,7 +277,8 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
         if (satexclude(sat,vare[i],svh[i],opt)) continue;
         
         /* geometric distance */
-        if ((r=geodist(rs+i*6,rr,e))<=0.0) continue;    //调用 geodist 函数，计算卫星和当前接收机位置之间的几何距离 r和接收机到卫星方向的观测矢量。//然后检验几何距离是否 >0。此函数中会进行地球自转影响的校正（Sagnac效应）
+        if ((r=geodist(rs+i*6,rr,e))<=0.0) continue;    //调用 geodist 函数，计算卫星和当前接收机位置之间的几何距离 r和接收机到卫星方向的观测矢量。
+                                                        //然后检验几何距离是否 >0。此函数中会进行地球自转影响的校正（Sagnac效应）
         
         if (iter>0) {
             /* test elevation mask */   // 调用 satazel 函数，计算在接收机位置处的站心坐标系中卫星的方位角和仰角；若仰角低于截断值，不处理此数据。
@@ -286,12 +287,12 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
             /* test SNR mask */     // 调用snrmask()->testsnr()，根据接收机高度角和信号频率来检测该信号是否可用
             if (!snrmask(obs+i,azel+i*2,opt)) continue;
             
-            /* ionospheric correction */    // 调用 ionocorr 函数，计算电离层延时I,所得的电离层延时是建立在 L1 信号上的，
+            /* ionospheric correction */    // 调用 ionocorr 函数，计算电离层延时I,所得的电离层延时是建立在 L1 信号上的，获取电离层改正量dion，及电离层改正误差vion
             if (!ionocorr(time,nav,sat,pos,azel+i*2,opt->ionoopt,&dion,&vion)) {
                 continue;
             }
             if ((freq=sat2freq(sat,obs[i].code[0],nav))==0.0) continue;     // 当使用其它频率信号时，依据所用信号频组中第一个频率的波长与 L1 波长的关系，对上一步得到的电离层延时进行修正。
-            dion*=SQR(FREQ1/freq);  //电离层改正量
+            dion*=SQR(FREQ1/freq);  //电离层改正量（电离层改正量的关系可以通过频率间的关系来描述）
             vion*=SQR(FREQ1/freq);  //电离层改正误差
             
             /* tropospheric correction */       //调用 tropcorr 函数，计算对流层延时T
@@ -302,8 +303,8 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
         /* psendorange with code bias correction */     //调用 prange 函数，得到经过DCB校正后的伪距值 ρ
         if ((P=prange(obs+i,nav,opt,&vmeas))==0.0) continue;
         
-        /* pseudorange residual */      //伪距残差  //(P-(r+c*dtr-c*dts+I+T))   (E.6.31)
-        v[nv]=P-(r+dtr-CLIGHT*dts[i*2]+dion+dtrp);
+        /* pseudorange residual */      //伪距残差（即G.X=b，中的b）
+        v[nv]=P-(r+dtr-CLIGHT*dts[i*2]+dion+dtrp);  //(P-(r+c*dtr-c*dts+I+T))   (E.6.31)
         
         /* design matrix */     // 组装设计矩阵H单位向量的反，前 3 行为中计算得到的视线向，第 4 行为 1，其它行为 0
         for (j=0;j<NX;j++) {
@@ -351,10 +352,13 @@ static int valsol(const double *azel, const int *vsat, int n,
     /* Chi-square validation of residuals */
     vv=dot(v,v,nv);
     if (nv>nx&&vv>chisqr[nv-nx-1]) {
-        sprintf(msg,"chi-square error nv=%d vv=%.1f cs=%.1f",nv,vv,chisqr[nv-nx-1]);
+        sprintf(msg,"chi-square error nv=%d vv=%.1f cs=%.1f",nv,vv,chisqr[nv-nx-1]);    //如果残差的平方和超过某个阈值（chisqr[nv-nx-1]），则认为解的可靠性存在问题。
         return 0;
     }
     /* large GDOP check */
+    //计算位置解的几何分布参数（GDOP），并检查其是否超过某个阈值（opt->maxgdop）。
+    //GDOP表示在不同方向上的不确定性，这个检查主要是为了确保解的精度在可接受范围内。
+    //如果GDOP过大，可能意味着解在某个方向上的不确定性很高。
     for (i=ns=0;i<n;i++) {
         if (!vsat[i]) continue;
         azels[  ns*2]=azel[  i*2];
@@ -397,11 +401,11 @@ static int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
             sprintf(msg,"lack of valid sats ns=%d",nv);
             break;
         }
-        /* weighted by Std */       //以伪距残差的标准差的倒数作为权重，对 H 和 v 分别左乘权重对角阵，得到加权之后的H和v
+        /* weighted by Std */       //以伪距残差的标准差的倒数作为权重，对 H 和 v 分别左乘权重对角阵，得到加权之后的H和v，加权后的方程组
         for (j=0;j<nv;j++) {
             sig=sqrt(var[j]);       //这里的权重值是对角阵，这是建立在假设不同测量值的误差之间是彼此独立的基础上的
-            //直接对 H 和 v 分别左乘权重对角阵，得到加权之后的 H 和 v（每个元素除sig）
-            v[j]/=sig;
+                                   
+            v[j]/=sig;              //直接对 H 和 v 分别左乘权重对角阵，得到加权之后的 H 和 v（每个元素除sig）
             for (k=0;k<NX;k++) H[k+j*NX]/=sig;
         }
         /* least square estimation */
@@ -570,7 +574,8 @@ static void estvel(const obsd_t *obs, int n, const double *rs, const double *dts
                    const nav_t *nav, const prcopt_t *opt, sol_t *sol,
                    const double *azel, const int *vsat)
 {
-    double x[4]={0},dx[4],Q[16],*v,*H;
+    double x[4]={0},    ////这里不像定位时，初始值可能为上一历元的位置(从 sol 中读取初始值)，这里定速的初始值直接给定为 0
+        dx[4],Q[16],*v,*H;
     double err=opt->err[4]; /* Doppler error (Hz) */
     int i,j,nv;
     
@@ -579,12 +584,13 @@ static void estvel(const obsd_t *obs, int n, const double *rs, const double *dts
     v=mat(n,1); H=mat(4,n);
     
     for (i=0;i<MAXITR;i++) {
-        
+        //在最大迭代次数(10次）限制内
+        //调用 resdop，计算定速方程组左边的几何矩阵和右端的速度残余，返回定速时所使用的卫星数目   
         /* range rate residuals (m/s) */
         if ((nv=resdop(obs,n,rs,dts,nav,sol->rr,x,azel,vsat,err,v,H))<4) {
             break;
         }
-        /* least square estimation */
+        /* least square estimation */   //调用最小二乘法lsq()函数，解出{速度、频漂}的改正量dx，累加到x中。
         if (lsq(H,v,4,nv,dx,Q)) break;
         
         for (j=0;j<4;j++) x[j]+=dx[j];
@@ -620,7 +626,11 @@ extern int pntpos(const obsd_t *obs, int n, const nav_t *nav,
                   char *msg)
 {
     prcopt_t opt_=*opt;
-    double *rs,*dts,*var,*azel_,*resp;
+    double *rs,     //卫星位置，速度
+        *dts,       //卫星钟差
+        *var,       //卫星位置，速度，钟差的协方差阵
+        *azel_,     // 调用 satazel 函数，计算在接收机位置处的站心坐标系中卫星的方位角和仰角；若仰角低于截断值，不处理此数据。
+        *resp;      
     int i,stat,vsat[MAXOBS]={0},svh[MAXOBS];
     
     trace(3,"pntpos  : tobs=%s n=%d\n",time_str(obs[0].time,3),n);
@@ -641,18 +651,18 @@ extern int pntpos(const obsd_t *obs, int n, const nav_t *nav,
         opt_.tropopt=TROPOPT_SAAS;      //对流层矫正采用Saastmoinen模型
     }
     /* satellite positons, velocities and clocks */
-    satposs(sol->time,obs,n,nav,opt_.sateph,rs,dts,var,svh);    //计算卫星位置、速度和钟差
+    satposs(sol->time,obs,n,nav,opt_.sateph,rs,dts,var,svh);    //计算卫星位置和钟差
     
     /* estimate receiver position with pseudorange */
-    stat=estpos(obs,n,rs,dts,var,svh,nav,&opt_,sol,azel_,vsat,resp,msg);//用伪距位置估计，加权最小二乘，其中会调用valsol进行卡方检验和GDOP检验
+    stat=estpos(obs,n,rs,dts,var,svh,nav,&opt_,sol,azel_,vsat,resp,msg);//用伪距估计位置，加权最小二乘，其中会调用valsol进行卡方检验和GDOP检验
     
     /* RAIM FDE */
-    if (!stat&&n>=6&&opt->posopt[4]) {//estpos中valsol检验失败，即位置估计失败，会调用RAIM接收机自主完好性监测重新估计，前提是卫星数>6、对应参数解算设置opt->posopt[4]=1
+    if (!stat&&n>=6&&opt->posopt[4]) {  //estpos中valsol检验失败，即位置估计失败，会调用RAIM接收机自主完好性监测重新估计，前提是卫星数>6、对应参数解算设置opt->posopt[4]=1
         stat=raim_fde(obs,n,rs,dts,var,svh,nav,&opt_,sol,azel_,vsat,resp,msg);
     }
     /* estimate receiver velocity with Doppler */
     if (stat) {
-        estvel(obs,n,rs,dts,nav,&opt_,sol,azel_,vsat);      //用多普勒估计速度
+        estvel(obs,n,rs,dts,nav,&opt_,sol,azel_,vsat);      //用多普勒估计速度，钟漂
     }
     if (azel) {
         for (i=0;i<n*2;i++) azel[i]=azel_[i];       //存入方位角和俯仰角

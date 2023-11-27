@@ -750,7 +750,7 @@ extern double sat2freq(int sat, uint8_t code, const nav_t *nav)
 {
     int i,fcn=0,sys,prn;
     
-    sys=satsys(sat,&prn);
+    sys=satsys(sat,&prn);   //获取卫星系统
     
     if (sys==SYS_GLO) {
         if (!nav) return 0.0;
@@ -765,7 +765,7 @@ extern double sat2freq(int sat, uint8_t code, const nav_t *nav)
         }
         else return 0.0;
     }
-    return code2freq(sys,code,fcn);
+    return code2freq(sys,code,fcn); //将卫星，即编码转换为相应的频率
 }
 /* set code priority -----------------------------------------------------------
 * set code priority for multiple codes in a frequency
@@ -3713,15 +3713,15 @@ extern double tropmodel(gtime_t time, const double *pos, const double *azel,
     /* standard atmosphere */
     hgt=pos[2]<0.0?0.0:pos[2];
     
-    pres=1013.25*pow(1.0-2.2557E-5*hgt,5.2568);
-    temp=temp0-6.5E-3*hgt+273.16;
-    e=6.108*humi*exp((17.15*temp-4684.0)/(temp-38.45));
+    pres=1013.25*pow(1.0-2.2557E-5*hgt,5.2568); //求大气压P (E.5.1)
+    temp=temp0-6.5E-3*hgt+273.16;               //求温度temp (E.5.2)
+    e=6.108*humi*exp((17.15*temp-4684.0)/(temp-38.45)); //求大气水汽压力e (E.5.3)
     
     /* saastamoninen model */
-    z=PI/2.0-azel[1];
-    trph=0.0022768*pres/(1.0-0.00266*cos(2.0*pos[0])-0.00028*hgt/1E3)/cos(z);
-    trpw=0.002277*(1255.0/temp+0.05)*e/cos(z);
-    return trph+trpw;
+    z=PI/2.0-azel[1];       //求天顶角z 卫星高度角azel[1]的余角
+    trph=0.0022768*pres/(1.0-0.00266*cos(2.0*pos[0])-0.00028*hgt/1E3)/cos(z);   //求静力学延迟T
+    trpw=0.002277*(1255.0/temp+0.05)*e/cos(z);  //求湿延迟Tw (E.5.4)
+    return trph+trpw;   //Saastamoinen中对流层延迟为静力学延迟Th湿延迟Tw的和
 }
 #ifndef IERS_MODEL
 

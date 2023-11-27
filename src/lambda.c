@@ -76,13 +76,15 @@ static void reduction(int n, double *L, double *D, double *Z)
     int i,j,k;
     double del;
     
-    j=n-2; k=n-2;
+    j=n-2; k=n-2;   //调序变换
+    //对第0,1，...，k-1，k列进行降相关
     while (j>=0) {
-        if (j<=k) for (i=j+1;i<n;i++) gauss(n,L,Z,i,j);
+        if (j<=k) for (i=j+1;i<n;i++) gauss(n,L,Z,i,j); //从最后一列开始，各列非对角线元素从上往下依次降相关
         del=D[j]+L[j+1+j*n]*L[j+1+j*n]*D[j+1];
+        //检验条件，若不满足检验条件则开始进行调序变换
         if (del+1E-6<D[j+1]) { /* compared considering numerical error */
             perm(n,L,D,j,del,Z);
-            k=j; j=n-2;
+            k=j; j=n-2; //完成调序变换后重新从最后一列开始进行降相关及排序，k记录最后一次进行过调序变换的列序号
         }
         else j--;
     }
@@ -95,7 +97,7 @@ static int search(int n, int m, const double *L, const double *D,
     double newdist,maxdist=1E99,y;
     double *S=zeros(n,n),*dist=mat(n,1),*zb=mat(n,1),*z=mat(n,1),*step=mat(n,1);
     
-    k=n-1; dist[k]=0.0;
+    k=n-1; dist[k]=0.0; //k表示当前层，从最后一层（n-1）开始计算
     zb[k]=zs[k];
     z[k]=ROUND(zb[k]); y=zb[k]-z[k]; step[k]=SGN(y);
     for (c=0;c<LOOPMAX;c++) {
@@ -169,16 +171,17 @@ extern int lambda(int n, int m, const double *a, const double *Q, double *F,
     if (n<=0||m<=0) return -1;
     L=zeros(n,n); D=mat(n,1); Z=eye(n); z=mat(n,1); E=mat(n,m);
     
-    /* LD factorization */
+    /* LD factorization */  //调用LD()，首先对浮点协方差阵进行LD分解
     if (!(info=LD(n,Q,L,D))) {
         
+        //调用reduction()，lambda降相关性
         /* lambda reduction */
         reduction(n,L,D,Z);
-        matmul("TN",n,1,n,1.0,Z,a,0.0,z); /* z=Z'*a */
+        matmul("TN",n,1,n,1.0,Z,a,0.0,z); /* z=Z'*a */  // z变换，将双差模糊度进行变换
         
-        /* mlambda search */
+        /* mlambda search */    //调用search(),mlambda search，结果存储在E和s中（整数解）
         if (!(info=search(n,m,L,D,z,E,s))) {
-            
+            //逆Z变换，将在新空间中固定的模糊度逆变换回双差模糊度空间中，存储在F中
             info=solve("T",Z,E,n,m,F); /* F=Z'\E */
         }
     }
