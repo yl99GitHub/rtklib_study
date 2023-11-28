@@ -1,0 +1,84 @@
+﻿  convgpx.c
+  convkml.c
+  convrnx.c
+  datum.c
+  download.c
+D:\RTKLIB\rtklib\rtklib_demo\src\download.c(136,39): warning C4133: “函数”: 从“const char *”到“LPCWSTR”的类型不兼容
+D:\RTKLIB\rtklib\rtklib_demo\src\download.c(297,29): warning C4133: “函数”: 从“char [1024]”到“LPCWSTR”的类型不兼容
+D:\RTKLIB\rtklib\rtklib_demo\src\download.c(303,28): warning C4133: “函数”: 从“const char *”到“LPCWSTR”的类型不兼容
+D:\RTKLIB\rtklib\rtklib_demo\src\download.c(333,9): warning C4101: “stat”: 未引用的局部变量
+D:\RTKLIB\rtklib\rtklib_demo\src\download.c(561,22): warning C4101: “remot_p”: 未引用的局部变量
+D:\RTKLIB\rtklib\rtklib_demo\src\download.c(841,12): warning C4101: “tow”: 未引用的局部变量
+  ephemeris.c
+  geoid.c
+  gis.c
+D:\RTKLIB\rtklib\rtklib_demo\src\gis.c(312,25): warning C4101: “q”: 未引用的局部变量
+  ionex.c
+  lambda.c
+  options.c
+  pntpos.c
+  postpos.c
+  ppp.c
+  ppp_ar.c
+  preceph.c
+  binex.c
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\binex.c(987,31): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\binex.c(1008,31): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+  crescent.c
+  javad.c
+  novatel.c
+  正在生成代码...
+  正在编译...
+  nvs.c
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\nvs.c(107,46): warning C4244: “=”: 从“double”转换到“int”，可能丢失数据
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\nvs.c(263,29): warning C4244: “=”: 从“double”转换到“int”，可能丢失数据
+  rt17.c
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\rt17.c(1796,34): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\rt17.c(1832,34): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+  septentrio.c
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\septentrio.c(236,22): warning C4146: 一元负运算符应用于无符号类型，结果仍为无符号类型
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\septentrio.c(282,67): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+  skytraq.c
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\skytraq.c(202,52): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\skytraq.c(325,21): warning C4244: “=”: 从“uint16_t”转换到“uint8_t”，可能丢失数据
+D:\RTKLIB\rtklib\rtklib_demo\src\rcv\skytraq.c(332,52): warning C4244: “=”: 从“double”转换到“float”，可能丢失数据
+  ss2.c
+  ublox.c
+  rcvraw.c
+  rinex.c
+D:\RTKLIB\rtklib\rtklib_demo\src\rinex.c(240,39): warning C4244: “return”: 从“double”转换到“int”，可能丢失数据
+  rnx2rtkp.c
+  rtcm.c
+  rtcm2.c
+  rtcm3.c
+  rtcm3e.c
+  rtkcmn.c
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3298,24): warning C4477: “sprintf”: 格式字符串“%s”需要类型“char *”的参数，但可变参数 2 拥有了类型“WCHAR *”
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3298,24): message : 请考虑在格式字符串中使用“%ls”
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3298,24): message : 请考虑在格式字符串中使用“%lls”
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3298,24): message : 请考虑在格式字符串中使用“%Ls”
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3298,24): message : 请考虑在格式字符串中使用“%ws”
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3301,28): warning C4477: “sprintf”: 格式字符串“%s”需要类型“char *”的参数，但可变参数 2 拥有了类型“WCHAR *”
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3301,28): message : 请考虑在格式字符串中使用“%ls”
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3301,28): message : 请考虑在格式字符串中使用“%lls”
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3301,28): message : 请考虑在格式字符串中使用“%Ls”
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3301,28): message : 请考虑在格式字符串中使用“%ws”
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3358,29): warning C4133: “函数”: 从“char [1024]”到“LPCWSTR”的类型不兼容
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkcmn.c(3364,28): warning C4133: “函数”: 从“const char *”到“LPCWSTR”的类型不兼容
+  rtkpos.c
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkpos.c(1540,12): warning C4101: “j”: 未引用的局部变量
+D:\RTKLIB\rtklib\rtklib_demo\src\rtkpos.c(1568,31): warning C4013: “resamb_LAMBDA”未定义；假设外部返回 int
+  rtksvr.c
+  sbas.c
+  solution.c
+  stream.c
+D:\RTKLIB\rtklib\rtklib_demo\src\stream.c(394,31): warning C4133: “函数”: 从“char [128]”到“LPCWSTR”的类型不兼容
+D:\RTKLIB\rtklib\rtklib_demo\src\stream.c(409,26): warning C4133: “函数”: 从“char [64]”到“LPCWSTR”的类型不兼容
+D:\RTKLIB\rtklib\rtklib_demo\src\stream.c(794,12): warning C4101: “rs”: 未引用的局部变量
+  streamsvr.c
+  正在生成代码...
+  正在编译...
+  tides.c
+  tle.c
+  正在生成代码...
+  RTKLIB_demo.vcxproj -> D:\RTKLIB\rtklib\rtklib_demo\Debug\RTKLIB_demo.exe
