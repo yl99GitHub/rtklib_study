@@ -109,6 +109,9 @@ int main(int argc, char **argv)
     prcopt.mode  =PMODE_KINEMA;// 定位模式默认动态相对定位Kinematic
     prcopt.navsys=0;// 卫星系统，先设置无
     prcopt.refpos=1;// 基准站坐标，先设为由SPP平均解得到
+                        /* base position for relative mode */
+                        /* (0:pos in prcopt,  1:average of single pos, */
+                        /*  2:read from file, 3:rinex header, 4:rtcm pos) */
     prcopt.glomodear=1;// GLONASS AR mode,先设on
     solopt.timef=0;// 输出时间格式，先设sssss.s
     sprintf(solopt.prog ,"%s ver.%s %s",PROGNAME,VER_RTKLIB,PATCH_LEVEL);
@@ -190,20 +193,6 @@ int main(int argc, char **argv)
         showmsg("error : no input file");
         return -2;
     }
-
-        //   gtime_t ts       I   processing start time (ts.time==0: no limit)
-        //   gtime_t te       I   processing end time   (te.time==0: no limit)
-        //   double ti        I   processing interval  (s) (0:all)
-        //   double tu        I   processing unit time (s) (0:all)
-        //   prcopt_t *popt   I   processing options
-        //   solopt_t *sopt   I   solution options
-        //   filopt_t *fopt   I   file options
-        //   char   **infile  I   input files (see below)
-        //   int    n         I   number of input files
-        //   char   *outfile  I   output file ("":stdout, see below)
-        //   char   *rov      I   rover id list        (separated by " ")
-        //   char   *base     I   base station id list (separated by " ")
-        //后处理定位解算
 
 
     ret=postpos(ts,te,tint,0.0,&prcopt,&solopt,&filopt,infile,n,outfile,"","");

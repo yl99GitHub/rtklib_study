@@ -238,7 +238,7 @@ static int inputobs(obsd_t *obs, int solq, const prcopt_t *popt)
 {
     gtime_t time={0};
     int i,
-        nu,nr,  //nu、nr存同一流动站基准站相同历元的观测值个数，应该是卫星不同
+        nu,nr,  //nu、nr分别存流动站，基准站相同历元的观测值个数
         n=0;    //obs数组下标
 
         //iobsu ：流动站当前历元索引
@@ -357,7 +357,7 @@ static void procpos(FILE *fp, const prcopt_t *popt, const solopt_t *sopt,
         /* exclude satellites */
         for (i=n=0;i<nobs;i++) {    //satsys:传入satellite number，返回卫星系统(SYS_GPS,SYS_GLO,...) ，通过传入的指针prn传出PRN码。
             if ((satsys(obs[i].sat,NULL)&popt->navsys)&&
-                popt->exsats[obs[i].sat-1]!=1) obs[n++]=obs[i]; //排除禁用卫星的观测值
+                popt->exsats[obs[i].sat-1]!=1) obs[n++]=obs[i]; //包含该卫星的观测值，把包含卫星的观测值数据重新赋值给obs[]，排除的卫星不进行该操作
         }
         if (n<=0) continue;
         

@@ -21,7 +21,7 @@
 #define LOOPMAX     10000           /* maximum count of search loop */
 
 #define SGN(x)      ((x)<=0.0?-1.0:1.0)
-#define ROUND(x)    (floor((x)+0.5))
+#define ROUND(x)    (floor((x)+0.5))    //floor 向下取整
 #define SWAP(x,y)   do {double tmp_; tmp_=x; x=y; y=tmp_;} while (0)
 
 /* LD factorization (Q=L'*diag(D)*L) -----------------------------------------*/
@@ -95,44 +95,51 @@ static int search(int n, int m, const double *L, const double *D,
     double newdist,maxdist=1E99,y;
     double *S=zeros(n,n),*dist=mat(n,1),*zb=mat(n,1),*z=mat(n,1),*step=mat(n,1);
     
-    k=n-1; dist[k]=0.0;
+    k=n-1; dist[k]=0.0; //k表示当前层，从最后一层（n-1）开始计算
     zb[k]=zs[k];
-    z[k]=ROUND(zb[k]); y=zb[k]-z[k]; step[k]=SGN(y);
+    z[k]=ROUND(zb[k]); y=zb[k]-z[k]; step[k]=SGN(y);    //四舍五入取整；取整后的数与未取整的数作差；step记录z[k]是四舍还是五入
     for (c=0;c<LOOPMAX;c++) {
         newdist=dist[k]+y*y/D[k];
-        if (newdist<maxdist) {
-            if (k!=0) {
-                dist[--k]=newdist;
+        if (newdist<maxdist) {  //如果当前累积目标函数计算值小于当前超椭圆半径
+            if (k!=0) {  //情况1：若还未计算至第一层，继续计算累积目标函数值，
+                //目的是先计算出一个整数解
+                dist[--k]=newdist;   //记录下当前层的累积目标函数值，dist[k]表示了第k,k+1,...,n-1层的目标函数计算和
                 for (i=0;i<=k;i++)
                     S[k+i*n]=S[k+1+i*n]+(z[k+1]-zb[k+1])*L[k+1+i*n];
-                zb[k]=zs[k]+S[k+k*n];
-                z[k]=ROUND(zb[k]); y=zb[k]-z[k]; step[k]=SGN(y);
+                zb[k]=zs[k]+S[k+k*n];   //计算Zk，即第k个整数模糊度参数的备选组的中心
+                z[k]=ROUND(zb[k]); y=zb[k]-z[k]; step[k]=SGN(y); //第k个候选元素
             }
-            else {
+            else {  //情况2：若已经计算至第一层，意味着所有层的累积目标函数值计算完毕
+                    //nn为当前候选解数，m为我们需要的固定解数，这里为2，表示需要一个最优解及一个次优解
+                    //s记录候选解的目标函数值，imax记录之前候选解中的最大目标函数值的坐标
                 if (nn<m) {
-                    if (nn==0||newdist>s[imax]) imax=nn;
-                    for (i=0;i<n;i++) zn[i+nn*n]=z[i];
-                    s[nn++]=newdist;
+                    if (nn==0||newdist>s[imax]) imax=nn;    //若当前解的目标函数值比之前最大的目标函数值都大，那么更新imax使s[imax]指向当前解中具有的最大目标函数值（最优解）
+                    for (i=0;i<n;i++) zn[i+nn*n]=z[i];      //zn存放所有候选解
+                    s[nn++]=newdist;    //s记录当前目标函数值newdist，并加加当前候选解数nn
                 }
-                else {
-                    if (newdist<s[imax]) {
-                        for (i=0;i<n;i++) zn[i+imax*n]=z[i];
-                        s[imax]=newdist;
-                        for (i=imax=0;i<m;i++) if (s[imax]<s[i]) imax=i;
+                else {  //若候选解数已满（即当前zn中已经存了2个候选解）
+                    if (newdist<s[imax]) {  //若当前解的目标函数值比s中的最大目标函数值 小
+                        for (i=0;i<n;i++) zn[i+imax*n]=z[i];    //用当前解替换zn中具有较大目标函数值的解
+                        s[imax]=newdist;    //用当前解的目标函数值替换s中的最大目标函数值
+                        for (i=imax=0;i<m;i++) if (s[imax]<s[i]) imax=i;    //更新imax保证imax始终指向s中的最大目标函数值
                     }
-                    maxdist=s[imax];
+                    maxdist=s[imax];    //用当前最大的目标函数值更新超椭圆半径
                 }
-                z[0]+=step[0]; y=zb[0]-z[0]; step[0]=-step[0]-SGN(step[0]);
+                z[0]+=step[0]; y=zb[0]-z[0]; step[0]=-step[0]-SGN(step[0]); //在第一层，取下一个有效的整数模糊度参数进行计算（若zb为5.3，则z取值顺序为5,6,4,7，...）
+                //next valid integer，从第一层开始计算新的整数解，若出现newdist>maxdist的情况，则进行下面一个else，回退计算新的整数解
+                //越加到前面的层对dist的影响越大，即越容易出现newdist>maxdist的情况，所以先从第一位开始，按(ref. [2])中（25）（26）搜索新的整数解
             }
         }
-        else {
-            if (k==n-1) break;
-            else {
-                k++;
-                z[k]+=step[k]; y=zb[k]-z[k]; step[k]=-step[k]-SGN(step[k]);
+        else {  //情况3：如果当前累积目标函数计算值大于当前超椭圆半径
+            if (k==n-1) break;   //如果当前层为第n-1层，意味着后续目标函数各项的计算都会超出超椭圆半径，因此终止搜索
+            else {  //若当前层不是第n-1层
+                k++;    //退后一层，即从第k层退到第k+1层
+                z[k]+=step[k]; y=zb[k]-z[k]; step[k]=-step[k]-SGN(step[k]); //计算退后一层后，当前层的下一个有效备选解
             }
         }
     }
+    // 对s中的目标函数值及zn中的候选解进行排序（以s中目标函数值为排序标准，进行升序排序）
+    // RTKLIB中最终可以得到一个最优解一个次优解，存在zn中，两解对应的目标函数值，存在s中
     for (i=0;i<m-1;i++) { /* sort by s */
         for (j=i+1;j<m;j++) {
             if (s[i]<s[j]) continue;
@@ -179,7 +186,7 @@ extern int lambda(int n, int m, const double *a, const double *Q, double *F,
         /* mlambda search */
         if (!(info=search(n,m,L,D,z,E,s))) {
             
-            info=solve("T",Z,E,n,m,F); /* F=Z'\E */
+            info=solve("T",Z,E,n,m,F); /* F=Z'\E */ //逆Z变换，将在新空间中固定的模糊度逆变换回双差模糊度空间中，存储在F中
         }
     }
     free(L); free(D); free(Z); free(z); free(E);

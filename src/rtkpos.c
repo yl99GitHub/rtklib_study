@@ -902,7 +902,8 @@ static int zdres(int base, const obsd_t *obs, int n, const double *rs,
     
     for (i=0;i<n;i++) {
         /* compute geometric-range and azimuth/elevation angle */
-        if ((r=geodist(rs+i*6,rr_,e+i*3))<=0.0) continue;
+        if ((r=geodist(rs+i*6,rr_,e+i*3))<=0.0) continue; //输出的r是经过地球自转校正后的数值，在下面的程序中
+                                                          //还将进行卫星钟差校正，对流层校正，接收机天线相位中心校正
         if (satazel(pos,e+i*3,azel+i*2)<opt->elmin) continue;
         
         /* excluded satellite? */
@@ -1097,10 +1098,12 @@ static int ddres(rtk_t *rtk, const nav_t *nav, double dt, const double *x,
                 Hi=H+nv*rtk->nx;
                 for (k=0;k<rtk->nx;k++) Hi[k]=0.0;
             }
-            /* DD residual */
+            /* DD residual */   //【参考星(移动站) - 参考星(基准站)】- 【非参考星(移动站) - 非参考星(基准站)】
             v[nv]=(y[f+iu[i]*nf*2]-y[f+ir[i]*nf*2])-
                   (y[f+iu[j]*nf*2]-y[f+ir[j]*nf*2]);
             
+            //移动站位置偏导
+            //移动站非参考星视线向量 - 移动站参考星视线向量
             /* partial derivatives by rover position */
             if (H) {
                 for (k=0;k<3;k++) {
@@ -1126,7 +1129,12 @@ static int ddres(rtk_t *rtk, const nav_t *nav, double dt, const double *x,
                     Hi[IT(1,opt)+k]=-(dtdxr[k+i*3]-dtdxr[k+j*3]);
                 }
             }
-            /* DD phase-bias term */
+
+            //用相位偏移修正v和H
+            //如果不是无电离层组合，
+            //从载波相位双差残差中扣除双差模糊度部分（即phase-bias），
+            //并对H矩阵中和模糊度相关的部分进行赋值
+            /* DD phase-bias term */ //双差模糊度部分
             if (f<nf) {
                 if (opt->ionoopt!=IONOOPT_IFLC) {
                     v[nv]-=CLIGHT/freqi*x[IB(sat[i],f,opt)]-
@@ -1276,6 +1284,7 @@ static int ddidx(rtk_t *rtk, int *ix)
     return nb;
 }
 /* restore SD (single-differenced) ambiguity ---------------------------------*/
+/*求解整周模糊度后调用该函数，实际是利用整数模糊度对单差相位偏移之外的所有状态向量进行修正*/
 static void restamb(rtk_t *rtk, const double *bias, int nb, double *xa)
 {
     int i,n,m,f,index[MAXSAT],nv=0,nf=NF(&rtk->opt);
@@ -1369,7 +1378,7 @@ static int resamb_LAMBDA(rtk_t *rtk, double *bias, double *xa)
     y=mat(nb,1); DP=mat(nb,nx-na); b=mat(nb,2); db=mat(nb,1); Qb=mat(nb,nb);
     Qab=mat(na,nb); QQ=mat(na,nb);
     
-    /* y=D*xc, Qb=D*Qc*D', Qab=Qac*D' */
+    /* y=D*xc, Qb=D*Qc*D', Qab=Qac*D' */ //对应manual中的G，即SD to DD transformation matrix G（D）
     for (i=0;i<nb;i++) {
         y[i]=rtk->x[ix[i*2]]-rtk->x[ix[i*2+1]];
     }
@@ -1505,7 +1514,7 @@ static int relpos(rtk_t *rtk, const obsd_t *obs, int nu, int nr,
         return 0;
     }
     /* temporal update of states */
-    udstate(rtk,obs,sat,iu,ir,ns,nav);
+    udstate(rtk,obs,sat,iu,ir,ns,nav); //状态一步更新
     
     trace(4,"x(0)="); tracemat(4,rtk->x,1,NR(opt),13,4);
     
@@ -1532,7 +1541,7 @@ static int relpos(rtk_t *rtk, const obsd_t *obs, int nu, int nr,
             stat=SOLQ_NONE;
             break;
         }
-        /* Kalman filter measurement update */
+        /* Kalman filter measurement update */  //kalman滤波第二步，更新预测值，获得浮点解
         matcpy(Pp,rtk->P,rtk->nx,rtk->nx);
         if ((info=filter(xp,Pp,H,v,R,rtk->nx,nv))) {
             errmsg(rtk,"filter error (info=%d)\n",info);
@@ -1544,7 +1553,7 @@ static int relpos(rtk_t *rtk, const obsd_t *obs, int nu, int nr,
     if (stat!=SOLQ_NONE&&zdres(0,obs,nu,rs,dts,var,svh,nav,xp,opt,0,y,e,azel,
                                freq)) {
         
-        /* post-fit residuals for float solution */
+        /* post-fit residuals for float solution */ //消去浮点解模糊度部分相位偏差（浮点 SD 相位偏差）
         nv=ddres(rtk,nav,dt,xp,Pp,sat,y,e,azel,freq,iu,ir,ns,v,NULL,R,vflg);
         
         /* validation of float solution */

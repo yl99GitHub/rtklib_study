@@ -770,13 +770,13 @@ extern void satposs(gtime_t teph, const obsd_t *obs, int n, const nav_t *nav,
     
     trace(3,"satposs : teph=%s n=%d ephopt=%d\n",time_str(teph,3),n,ephopt);
     
-    for (i=0;i<n&&i<2*MAXOBS;i++) {
+    for (i=0;i<n&&i<2*MAXOBS;i++) { //±éÀúÎÀÐÇ°ÑÃ¿¸öÎÀÐÇÎ»ÖÃ£¬ËÙ¶È£¬ÖÓ²îÖÃÁã
         for (j=0;j<6;j++) rs [j+i*6]=0.0;
         for (j=0;j<2;j++) dts[j+i*2]=0.0;
         var[i]=0.0; svh[i]=0;
         
         /* search any pseudorange */
-        for (j=0,pr=0.0;j<NFREQ;j++) if ((pr=obs[i].P[j])!=0.0) break;
+        for (j=0,pr=0.0;j<NFREQ;j++) if ((pr=obs[i].P[j])!=0.0) break;  //±éÀúËÑË÷Î±¾à
         
         if (j>=NFREQ) {
             trace(3,"no pseudorange %s sat=%2d\n",time_str(obs[i].time,3),obs[i].sat);
